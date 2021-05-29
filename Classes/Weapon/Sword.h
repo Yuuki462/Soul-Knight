@@ -10,14 +10,14 @@ class Sword :public Node
 {
 public:
 	CREATE_FUNC(Sword)
-	bool init();
+		bool init();
 
 	void bindsprite(Sprite* sprite);
 
 	void attack(bool face);//¹¥»÷º¯Êý
 
 protected:
-	
+
 	std::vector<bool>keypressed = std::vector<bool>(7, false);
 	Vector<SpriteFrame*>m_rightActionVec;
 	Vector<SpriteFrame*>m_leftActionVec;
