@@ -1,21 +1,16 @@
-#include"TableRoom.h"
-#include "player/Hero.h"
 
+
+#include"TableRoom.h"
+#include "player\Hero.h"
+#include "Weapon/Sword.h"
 USING_NS_CC;
 
 Scene* TableRoom::createScene()
 {
-    auto scene = Scene::create();
-    //auto layer = TableRoom::create();
-    //scene->addChild(layer);
-    //scene->getPhysicsWorld()->setGravity(Vec2::ZERO);
-    //scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
-    return scene;
-    /*auto scene = Scene::createWithPhysics();
-    auto layer = TableRoom::create();
+    Scene* scene = Scene::create();
+    TableRoom* layer = TableRoom::create();
     scene->addChild(layer);
-    scene->getPhysicsWorld()->setGravity(Vec2::ZERO);
-    return scene;*/
+    return scene;
 }
 static void problemLoading(const char* filename)
 {
@@ -30,41 +25,25 @@ bool TableRoom::init()
     {
         return false;
     }
+
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
+
     auto floor = Sprite::create("interface/hire_room_0.png");
-    //Sprite* edgeSpace = Sprite::create("interface/hire_room_0.png");
     if (floor == nullptr)
     {
-        problemLoading("'hire_room_0.png'");
+        problemLoading("'floor.png'");
     }
     else
     {
         // position the sprite on the center of the screen
-
-        /*PhysicsBody* boundBody = PhysicsBody::createEdgeBox(edgeSpace->getContentSize(), PHYSICSBODY_MATERIAL_DEFAULT, 3);
-        boundBody->getShape(0)->setFriction(0.0f);
-        boundBody->getShape(0)->setRestitution(1.0f);
-
-        edgeSpace->setPhysicsBody(boundBody);
-        edgeSpace->setPosition(Point(visibleSize.width / 2, visibleSize.height / 2));
-        this->addChild(edgeSpace);
-        edgeSpace->setTag(0);*/
-
-
-
-        //PhysicsBody* edge = PhysicsBody::createEdgeBox(floor->getContentSize(), PHYSICSBODY_MATERIAL_DEFAULT);
-        //edge->setGravityEnable(false);
-
-        //edge->setCategoryBitmask(0x1); // 0001
-        //edge->setContactTestBitmask(0x0); // 0100
-        //edge->setCollisionBitmask(0x3c); // 0011
-        //floor->setPhysicsBody(edge);
         floor->setPosition(Vec2(visibleSize.width / 2 + origin.x, visibleSize.height / 2 + origin.y));
+
         // add the sprite as a child to this layer
-        this->addChild(floor, 1, 0x1);
+        this->addChild(floor, 0);
     }
+
     auto table = Sprite::create("table.png");
     if (table == nullptr)
     {
@@ -249,6 +228,7 @@ bool TableRoom::init()
         addChild(eggTwist, 3, 112);
     }
 
+
     auto canBed = Sprite::create("canBed.png");
     if (canBed == nullptr)
     {
@@ -260,35 +240,124 @@ bool TableRoom::init()
             visibleSize.height / 2 + origin.y - 230.0));
         addChild(canBed, 3, 113);
     }
-    
-    /*auto Sword = Sprite::create("item/sword.png");
-    Sword->setPosition(Vec2(visibleSize.width / 2 + origin.x+90, visibleSize.height / 2 + origin.y+20));
-    addChild(Sword, 5);*/
-    
-    /*gun->getSprite()->setPosition(Vec2(visibleSize.width / 2 + origin.x + 90, visibleSize.height / 2 + origin.y + 20));
-    addChild(gun->getSprite(), 5);*/
-    
-    Hero*hero=Hero::create();
-    hero->getSprite()->setPosition(Vec2(visibleSize.width / 2 + origin.x + 75,
-        visibleSize.height / 2 + origin.y));
+
+
+    auto sprite = Sprite::create("Actor/knight_rest1.png");
+    if (sprite == nullptr)
+    {
+        log("sprite.png not found");
+    }
+    else
+    {
+        sprite->setPosition(Vec2(visibleSize.width / 2 + origin.x + 75,
+            visibleSize.height / 2 + origin.y));
+        this->addChild(sprite, 4);
+    }
+
+    auto sprite1 = Sprite::create("item/sword.png");
+    if (sprite1 == nullptr)
+    {
+        log("sprite1.png not found");
+    }
+    else
+    {
+        sprite1->setPosition(Vec2(visibleSize.width / 2 + origin.x + 75,
+            visibleSize.height / 2 + origin.y + 5));
+        this->addChild(sprite1, 4);
+    }
+
+
+
+    hero = Hero::create();
     this->addChild(hero, 4);
-    
-    
-    /*hero->bindWeapon(gun);*/
-    /*hero->bindsword(Sword);*/
+    Sword* sword = Sword::create();
+    this->addChild(sword, 4);
+    hero->bindsprite(sprite);
+    sword->bindsprite(sprite1);
+    hero->setmymainweapon(sword);
     hero->RestAction();
     auto keyBoardListenerHero = EventListenerKeyboard::create();
     keyBoardListenerHero->onKeyPressed = CC_CALLBACK_2(Hero::onKeyPressed, hero);
     keyBoardListenerHero->onKeyReleased = CC_CALLBACK_2(Hero::onKeyreleased, hero);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyBoardListenerHero, this);
-    
-    BulletLayer* bulletLayer = BulletLayer::create();
-    bulletLayer->retain();
-    bulletLayer->bindHero(hero);
-    this->addChild(bulletLayer, 10);
-
     hero->scheduleUpdate();
-    
+    sword->scheduleUpdate();
+    m_pMap = TMXTiledMap::create("map/SafeMap.tmx");
+
+    addChild(m_pMap, 3);
+    this->scheduleUpdate();
+
+
     return true;
 }
 
+void TableRoom::isCollision()
+{
+    Vec2 pos = hero->getposition();
+
+    barrier = m_pMap->getObjectGroup("barrier");
+    ValueVector object = barrier->getObjects();
+    for (ValueVector::iterator it = object.begin(); it != object.end(); it++) 
+    {
+        Value obj = *it;
+        ValueMap map = obj.asValueMap();
+        int x = map.at("x").asInt();
+        int y = map.at("y").asInt();
+        int width = map.at("width").asInt();
+        int height = map.at("height").asInt();
+        if (pos.x<x && pos.x>x - 10)
+        {
+            if(1)//陳衵
+                hero->setSpeed(0);
+            else
+                hero->setSpeed(3);
+        }
+        else if (pos.x > x+width && pos.x < x+width + 10)
+        {
+            if (1)//陳酘
+                hero->setSpeed(0);
+            else
+                hero->setSpeed(3);
+        }
+        else if (pos.y >y && pos.y< y+ 10)
+        {
+            if (1)//陳狟
+                hero->setSpeed(0);
+            else
+                hero->setSpeed(3);
+        }
+        else if(pos.y < y-height && pos.y > y-height - 10)
+        {
+            if (1)//陳奻
+                hero->setSpeed(0);
+            else
+                hero->setSpeed(3);
+        }
+        /*if (pos.x > (map.at("x").asInt()) && pos.x < (map.at("x").asInt() + map.at("width").asInt()) &&
+            pos.y <(map.at("y").asInt()) && pos.y > (map.at("y").asInt() - map.at("height").asInt()))
+        {
+
+            hero->setSpeed(0);
+        }
+        else
+        {
+            hero->setSpeed(3);
+        }*/
+    }
+  
+
+}
+void TableRoom::update(float delta)
+{
+
+
+     isCollision();
+        
+    //startgame();
+}
+/*
+void TableRoom::startgame()
+{
+    if (transfer->getBoundingBox().containsPoint(hero->getposition()))
+        Director::getInstance()->end();
+}*/
